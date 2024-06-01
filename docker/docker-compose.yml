@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15.3-alpine
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_DB: keycloak
+    volumes:
+      - "./init:/docker-entrypoint-initdb.d"      
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'PGPASSWORD=keycloak pg_isready -U keycloak -d keycloak'"]
+      interval: 5s
+      timeout: 60s
+      retries: 10
+      start_period: 5s      
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    hostname: "keycloak-local"
+    restart: unless-stopped
+    command: start-dev
+    stop_grace_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8090:8080/tcp"
+      - "8090:8080/udp"
+    labels:
+      name: "keycloak-local"
+    environment:
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8090
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak?characterEncoding=UTF-8
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: info
+    networks:
+      default:
+        aliases:
+          - keycloak_local
+
+  keto-migration:
+    image: oryd/keto:v0.11.1
+    command: migrate up -y -c /home/ory/keto.yml
+    restart: no
+    environment:
+      DSN: postgres://keto:keto@postgres:5432/keto
+    volumes:
+      - type: bind
+        source: keto/.
+        target: /home/ory
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  keto:
+    image: oryd/keto:v0.11.1
+    ports:
+      - "4466:4466"
+      - "4467:4467"
+    command: serve -c /home/ory/keto.yml
+    restart: on-failure
+    environment:
+      DSN: postgres://keto:keto@postgres:5432/keto
+      LOG_LEAK_SENSITIVE_VALUES: true
+    volumes:
+      - type: bind
+        source: keto/.
+        target: /home/ory
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keto-migration:
+        condition: service_completed_successfully

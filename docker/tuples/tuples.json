@@ -1,0 +1,47 @@
+[
+  {
+    "namespace": "User",
+    "object": "jane",
+    "relation": "manager",
+    "subject_id": "admin"
+  },
+  {
+    "namespace": "Organization",
+    "object": "1",
+    "relation": "owners",
+    "subject_id": "jane"
+  },
+  {
+    "namespace": "Organization",
+    "object": "2",
+    "relation": "owners",
+    "subject_id": "admin"
+  },
+  {
+    "namespace": "User",
+    "object": "jane",
+    "relation": "manager",
+    "subject_set": {
+      "namespace": "User",
+      "object": "admin",
+      "relation": ""
+    }
+  },
+  {
+    "namespace": "Organization",
+    "object": "2",
+    "relation": "parents",
+    "subject_id": "1"
+  },
+  {
+    "namespace": "Organization",
+    "object": "2",
+    "relation": "parents",
+    "subject_set": {
+      "namespace": "Organization",
+      "object": "1",
+      "relation": ""
+    }
+  }
+]
+
